@@ -73,4 +73,6 @@ bun run preview
 ```
 
 Check out the [deployment documentation](https://nuxt.com/docs/getting-started/deployment) for more information.
-"# Simple Ecommerce" 
+# Simple Ecommerce 
+## API:
+https://fakestoreapi.com/
