@@ -1,0 +1,15 @@
+:root {
+	--main-color: #ebecf0;
+}
+
+body {
+	margin: 0px;
+	padding: 0px;
+	background-color: var(--main-color);
+}
+
+.neumorphism {
+	color: #61677c;
+	box-shadow: -5px -5px 20px #ffffff, 5px 5px 20px #babecc;
+	background: #ebecf0;
+}
