@@ -4,9 +4,9 @@ import (
 	"SimpleEcommerce/database"
 	"SimpleEcommerce/database/entities"
 	"context"
+	"database/sql"
 	"encoding/json"
 	"net/http"
-	"strconv"
 
 	"github.com/julienschmidt/httprouter"
 )
@@ -47,7 +47,6 @@ func GetCart(writer http.ResponseWriter, request *http.Request, params httproute
 	id := params.ByName("id")
 
 	ctx := context.Background()
-	var responses []entities.CartResponse
 	var cart entities.CartResponse
 	row := database.DB.QueryRowContext(ctx, `SELECT * FROM cart WHERE id_product = ?`, id)
 	err := row.Scan(&cart.Id, &cart.IdProduct, &cart.Title, &cart.Price, &cart.Image, &cart.Rating, &cart.Quantity)
@@ -55,9 +54,8 @@ func GetCart(writer http.ResponseWriter, request *http.Request, params httproute
 		http.Error(writer, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	responses = append(responses, cart)
 
-	responseJSON, err := json.Marshal(responses)
+	responseJSON, err := json.Marshal(cart)
 	if err != nil {
 		http.Error(writer, err.Error(), http.StatusInternalServerError)
 		return
@@ -70,7 +68,6 @@ func GetCart(writer http.ResponseWriter, request *http.Request, params httproute
 }
 
 func PostCart(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
-
 	// Handle the main request logic
 	var cart entities.CartResponse
 	decoder := json.NewDecoder(request.Body)
@@ -78,16 +75,36 @@ func PostCart(writer http.ResponseWriter, request *http.Request, params httprout
 		http.Error(writer, err.Error(), http.StatusBadRequest)
 		return
 	}
-
 	defer request.Body.Close()
 
-	_, err := database.DB.Exec(`
-        INSERT INTO cart(id, id_product, title, price, image, rating, quantity) 
-        VALUES (?, ?, ?, ?, ?, ?, ?)`, "", cart.IdProduct, cart.Title, cart.Price, cart.Image, cart.Rating, cart.Quantity)
-	if err != nil {
+	// check Product if exist
+	var existingCart entities.CartResponse
+	ctx := context.Background()
+	row := database.DB.QueryRowContext(ctx, `SELECT id_product, id, title, price, image, rating, quantity FROM cart WHERE id_product = ?`, cart.IdProduct)
+	err := row.Scan(&existingCart.IdProduct, &existingCart.Id, &existingCart.Title, &existingCart.Price, &existingCart.Image, &existingCart.Rating, &existingCart.Quantity)
+	if err != nil && err != sql.ErrNoRows {
 		http.Error(writer, err.Error(), http.StatusInternalServerError)
 		return
 	}
+
+	// if exist update the quantity if not post the product to cart table
+	if existingCart.IdProduct == cart.IdProduct {
+		existingCart.Quantity += cart.Quantity
+		_, err = database.DB.Exec(`UPDATE cart SET quantity = ? WHERE id_product = ?`, existingCart.Quantity, existingCart.IdProduct)
+		if err != nil {
+			http.Error(writer, err.Error(), http.StatusInternalServerError)
+			return
+		}
+	} else {
+		_, err = database.DB.Exec(`
+			INSERT INTO cart(id_product, title, price, image, rating, quantity) 
+			VALUES (?, ?, ?, ?, ?, ?)`, cart.IdProduct, cart.Title, cart.Price, cart.Image, cart.Rating, cart.Quantity)
+		if err != nil {
+			http.Error(writer, err.Error(), http.StatusInternalServerError)
+			return
+		}
+	}
+
 	var response entities.Response
 	response.Code = 200
 	response.Messege = "Success"
@@ -105,20 +122,10 @@ func PostCart(writer http.ResponseWriter, request *http.Request, params httprout
 
 func PatchCart(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
 	id := params.ByName("id")
-	quantityStr := params.ByName("quantity")
-
-	// Parse quantity parameter to integer
-	quantity, err := strconv.Atoi(quantityStr)
-	if err != nil {
-		http.Error(writer, "Invalid quantity", http.StatusBadRequest)
-		return
-	}
-
-	quantity++
-
+	quantity := params.ByName("quantity")
 	var patch entities.Response
 
-	_, err = database.DB.Exec(`UPDATE cart SET quantity = ? WHERE id_product = ?`, quantity, id)
+	_, err := database.DB.Exec(`UPDATE cart SET quantity = ? WHERE id_product = ?`,quantity , id)
 	if err != nil {
 		http.Error(writer, err.Error(), http.StatusInternalServerError)
 		return
@@ -137,7 +144,6 @@ func PatchCart(writer http.ResponseWriter, request *http.Request, params httprou
 	writer.Header().Set("Content-Type", "application/json")
 	writer.Write(responseJSON)
 }
-
 
 func DeleteCart(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
 	id := params.ByName("id")
