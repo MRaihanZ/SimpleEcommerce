@@ -10,26 +10,53 @@
 						<div class="col-md-10">
 							<p>{{ p.title }}</p>
 							<p>Rp. {{ p.price }}k</p>
-							<p>
-								<svg
-									xmlns="http://www.w3.org/2000/svg"
-									width="16"
-									height="16"
-									fill="currentColor"
-									class="bi bi-star-fill mb-1"
-									viewBox="0 0 16 16"
+							<span>
+								<button
+									class="btn btn-primary me-2"
+									@click="QuantityCart(p.id_product, p.quantity, 'decrease')"
 								>
-									<path
-										d="M3.612 15.443c-.386.198-.824-.149-.746-.592l.83-4.73L.173 6.765c-.329-.314-.158-.888.283-.95l4.898-.696L7.538.792c.197-.39.73-.39.927 0l2.184 4.327 4.898.696c.441.062.612.636.282.95l-3.522 3.356.83 4.73c.078.443-.36.79-.746.592L8 13.187l-4.389 2.256z"
-									/>
-								</svg>
-								{{ p.rating }}
-							</p>
+									<svg
+										xmlns="http://www.w3.org/2000/svg"
+										width="16"
+										height="16"
+										fill="currentColor"
+										class="bi bi-dash"
+										viewBox="0 0 16 16"
+									>
+										<path
+											d="M4 8a.5.5 0 0 1 .5-.5h7a.5.5 0 0 1 0 1h-7A.5.5 0 0 1 4 8"
+										/>
+									</svg>
+								</button>
+								<input
+									type="number"
+									class="quantity-input d-inline-block form-control"
+									:value="p.quantity"
+								/>
+
+								<button
+									class="btn btn-primary ms-2"
+									@click="QuantityCart(p.id_product, p.quantity, 'increase')"
+								>
+									<svg
+										xmlns="http://www.w3.org/2000/svg"
+										width="16"
+										height="16"
+										fill="currentColor"
+										class="bi bi-plus"
+										viewBox="0 0 16 16"
+									>
+										<path
+											d="M8 4a.5.5 0 0 1 .5.5v3h3a.5.5 0 0 1 0 1h-3v3a.5.5 0 0 1-1 0v-3h-3a.5.5 0 0 1 0-1h3v-3A.5.5 0 0 1 8 4"
+										/>
+									</svg>
+								</button>
+							</span>
 						</div>
 						<div class="col-md-1">
 							<button
 								class="btn btn-danger btn-cart"
-								@click="addToCart(p.id_product)"
+								@click="deleteFromCart(p.id_product)"
 							>
 								<svg
 									xmlns="http://www.w3.org/2000/svg"
@@ -56,11 +83,27 @@
 <script setup>
 const { data: products } = await useFetch("http://localhost:8080/api/carts");
 
-async function addToCart(id) {
+async function deleteFromCart(id) {
 	await $fetch(`http://localhost:8080/api/cart/${id}`, {
 		method: "DELETE",
 	});
 	await refreshNuxtData();
+}
+
+async function QuantityCart(id, currentQuantity, action) {
+	if (action === "increase") {
+		let quantity = currentQuantity + 1;
+		await $fetch(`http://localhost:8080/api/cart/${id}/${quantity}`, {
+			method: "PATCH",
+		});
+		await refreshNuxtData();
+	} else if (action === "decrease") {
+		let quantity = currentQuantity - 1;
+		await $fetch(`http://localhost:8080/api/cart/${id}/${quantity}`, {
+			method: "PATCH",
+		});
+		await refreshNuxtData();
+	}
 }
 </script>
 
@@ -68,5 +111,9 @@ async function addToCart(id) {
 .btn-cart {
 	height: 100%;
 	width: 100%;
+}
+
+.quantity-input {
+	width: 4rem;
 }
 </style>

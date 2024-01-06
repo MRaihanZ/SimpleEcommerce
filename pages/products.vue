@@ -73,6 +73,7 @@ async function addToCart(id, title, price, image, rating) {
 		price: price,
 		image: image,
 		rating: rating,
+		quantity: 1,
 	};
 
 	await $fetch("http://localhost:8080/api/cart", {
